@@ -1,0 +1,81 @@
+<?xml version="1.0" ?> 
+<project name="DecorationBlock" default="release">
+	
+	<property file="build.properties" />
+	
+	<target name="version-provided" if="release.mod.version">
+		<buildnumber />
+		<property name="version.full" value="${release.mod.version}.${build.number}" />
+	</target>
+	
+	<target name="version-not-provided" unless="release.mod.version">
+		<buildnumber />
+		<property name="version.full" value="build${build.number}" />
+	</target>
+	
+	<target name="version" depends="version-provided,version-not-provided">
+	</target>
+	
+	<target name="clean">
+		<delete>
+			<dirset dir="${dir.mcp}/src/minecraft" excludes="cpw, ibxm, net, paulscode" />
+			<fileset dir="${dir.mcp}/src/minecraft" excludes="cpw/**, ibxm/**, net/**, paulscode/**, fml_at.cfg, fml_marker.cfg, fmlversion.properties, forge_at.cfg, forge_logo.png, mcp.png, mcpmod.info, Start.java" />
+		</delete>
+	</target>
+	
+	<macrodef name="copy-api-file">
+		<attribute name="dir" />
+		<attribute name="file" />
+		<sequential>
+			<mkdir dir="${dir.mcp}/src/minecraft/@{dir}" />
+			<copy todir="${dir.mcp}/src/minecraft/@{dir}" file="${dir.mcp}/api/@{dir}/@{file}" />
+		</sequential>
+	</macrodef>
+	
+	<macrodef name="copy-api-dir">
+		<attribute name="dir" />
+		<sequential>
+			<mkdir dir="${dir.mcp}/src/minecraft/@{dir}" />
+			<copy todir="${dir.mcp}/src/minecraft/@{dir}">
+				<fileset dir="${dir.mcp}/api/@{dir}" />
+			</copy>
+		</sequential>
+	</macrodef>
+	
+	<target name="build" depends="clean,version">
+		<filter token="THIS_MOD_VERSION" value="${version.full}" />
+		<copy todir="${dir.mcp}\src\minecraft" filtering="yes">
+			<fileset dir="${dir.src}" />
+		</copy>
+	</target>
+	
+	<target name="recompile" depends="build">
+		<exec dir="${dir.mcp}" executable="cmd" osfamily="windows">
+			<arg line="/c recompile.bat" />
+		</exec>
+		<exec dir="${dir.mcp}" executable="bash" osfamily="unix">
+			<arg line="recompile.sh" />
+		</exec>
+	</target>
+	
+	<target name="reobfuscate" depends="recompile">
+		<exec dir="${dir.mcp}" executable="cmd" osfamily="windows">
+			<arg line="/c reobfuscate.bat" />
+		</exec>
+		<exec dir="${dir.mcp}" executable="bash" osfamily="unix">
+			<arg line="reobfuscate.sh" />
+		</exec>
+	</target>
+	
+	<target name="release" depends="reobfuscate">
+		
+		<mkdir dir="${dir.release}" />
+		<jar destfile="${dir.release}\${release.mod.name}-${version.full}.jar">
+			<fileset dir="${dir.mcp}\reobf\minecraft" />
+			<fileset dir="${dir.resource}" />
+		</jar>
+		
+		<antcall target="clean" />
+	</target>
+	
+</project>
